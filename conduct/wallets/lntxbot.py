@@ -48,7 +48,9 @@ class LntxbotWallet(Wallet, RestMixin):
         return data
 
     def get_invoice_status(self, *, txid: str):
-        data = self._post(f"/invoicestatus/{txid}?wait=false", headers=self.auth_invoice)
+        data = self._post(
+            f"/invoicestatus/{txid}?wait=false", headers=self.auth_invoice
+        )
         return data
 
     def get_payment_status(self, *, txid: str):
