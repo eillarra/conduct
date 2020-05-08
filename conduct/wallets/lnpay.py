@@ -55,4 +55,4 @@ class LNPayWallet(Wallet, RestMixin):
         return data
 
     def get_payment_status(self, *, txid: str):
-        raise NotImplementedError
+        return self.get_invoice_status(txid=txid)
