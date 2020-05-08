@@ -13,7 +13,7 @@ setup(
     author="eillarra",
     author_email="eneko@illarra.com",
     license="MIT",
-    description="Lightning nodes conductor, with a code.",
+    description="A simple lightning nodes conductor, with a code.",
     long_description=long_description,
     long_description_content_type="text/markdown",
     keywords="bitcoin lightning-network",
@@ -30,14 +30,8 @@ setup(
         "Topic :: Utilities",
     ],
     packages=["conduct"],
-    install_requires=[
-        "httpx",
-    ],
-    extras_require={
-        "full": [
-            "lnd-grpc",
-            "pylightning",
-        ]
-    },
-    zip_safe=False
+    package_data={"conduct": ["py.typed"]},
+    install_requires=[],
+    extras_require={"full": ["lnd-grpc", "pylightning", "requests"]},
+    zip_safe=False,
 )

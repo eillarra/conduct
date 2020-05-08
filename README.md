@@ -16,10 +16,11 @@ Supported backends/wallets
 Dependencies
 ------------
 
-Only `httpx` is a hard dependency; the following are optional:
+Dependencies are optional, based on the chosen wallet:
 
-  - lnd-grpc - Required if you want to use the LndWallet.
-  - pylightning - Required if you want to use the CLightningWallet.
+  - `lnd-grpc`: required if you want to use the LndWallet.
+  - `pylightning`: required if you want to use the CLightningWallet.
+  - `request`: required if you want to use REST API based wallets (most of the wallets).
 
 You can install all of these with `pip install conduct[full]`.
 
