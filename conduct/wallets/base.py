@@ -46,17 +46,7 @@ class RestMixin:
 
     endpoint = ""
 
-    def _get(self, path: str, *, params: dict = {}, headers: dict = {}):
-        return self._process(
-            requests.get(f"{self.endpoint}{path}", params=params, headers=headers)
-        )
-
-    def _post(self, path: str, *, data: dict = {}, headers: dict = {}):
-        return self._process(
-            requests.post(f"{self.endpoint}{path}", json=data, headers=headers)
-        )
-
-    def _process(self, res: Response):
+    def __process(self, res: Response):
         if res.status_code == HTTPStatus.NOT_FOUND:
             raise ValueError  # NotFoundException
 
@@ -64,6 +54,16 @@ class RestMixin:
         self._check_response_errors(data)
 
         return data
+
+    def _get(self, path: str, *, params: dict = {}, headers: dict = {}):
+        return self.__process(
+            requests.get(f"{self.endpoint}{path}", params=params, headers=headers)
+        )
+
+    def _post(self, path: str, *, data: dict = {}, headers: dict = {}):
+        return self.__process(
+            requests.post(f"{self.endpoint}{path}", json=data, headers=headers)
+        )
 
     def _raise_error(self, error_msg: str) -> str:
         raise NotImplementedError

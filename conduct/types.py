@@ -9,8 +9,6 @@ class EpochTime(int):
 class Invoice(NamedTuple):
     txid: str
     payment_request: str
-    amount: int
-    description: Optional[str]
 
 
 class Payment(NamedTuple):

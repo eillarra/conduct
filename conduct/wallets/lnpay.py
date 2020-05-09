@@ -21,6 +21,15 @@ class LNPayWallet(Wallet, RestMixin):
     def _check_response_errors(self, data: dict) -> None:
         pass
 
+    def _create_invoice(
+        self, amount: int, description: str = "", expiry: int = 3600
+    ) -> dict:
+        return self._post(
+            f"/wallet/{self.invoice_key}/invoice",
+            data={"num_satoshis": str(amount), "memo": description, "expiry": expiry},
+            headers=self.auth,
+        )
+
     def get_info(self):
         raise NotImplementedError
 
@@ -29,18 +38,9 @@ class LNPayWallet(Wallet, RestMixin):
 
     def create_invoice(
         self, amount: int, description: str = "", expiry: int = 3600
-    ) -> Invoice:
-        data = self._post(
-            f"/wallet/{self.invoice_key}/invoice",
-            data={"num_satoshis": str(amount), "memo": description, "expiry": expiry},
-            headers=self.auth,
-        )
-        return Invoice(
-            txid=data["id"],
-            payment_request=data["payment_request"],
-            amount=amount,
-            description=description,
-        )
+    ):
+        data = self._create_invoice(amount, description, expiry)
+        return data
 
     def pay_invoice(self, *, payment_request: str):
         data = self._post(

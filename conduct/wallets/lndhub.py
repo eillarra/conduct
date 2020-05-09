@@ -42,15 +42,24 @@ class LndHubWallet(Wallet, RestMixin):
         lndhub = LndHub(getenv("LNDHUB_URI", ""))
         login, password = lndhub.credentials
         self.endpoint = self._untrail(lndhub.endpoint)
-        self.authenticate(login=login, password=password)
+        self.__authenticate(login=login, password=password)
+
+    def __authenticate(self, *, login: str, password: str) -> None:
+        res = self._post("/auth?type=auth", data={"login": login, "password": password})
+        self.refresh_token, access_token = res["refresh_token"], res["access_token"]
+        self.auth = {"Authorization": f"Bearer {access_token}"}
 
     def _check_response_errors(self, data: dict) -> None:
         pass
 
-    def authenticate(self, *, login: str, password: str) -> None:
-        res = self._post("/auth?type=auth", data={"login": login, "password": password})
-        self.refresh_token, access_token = res["refresh_token"], res["access_token"]
-        self.auth = {"Authorization": f"Bearer {access_token}"}
+    def _create_invoice(
+        self, amount: int, description: str = "", expiry: int = 3600
+    ) -> dict:
+        return self._post(
+            "/addinvoice",
+            data={"amt": str(amount), "memo": description},
+            headers=self.auth,
+        )
 
     def get_info(self):
         raise NotImplementedError
@@ -61,18 +70,9 @@ class LndHubWallet(Wallet, RestMixin):
 
     def create_invoice(
         self, *, amount: int, description: str = "", expiry: int = 3600
-    ) -> Invoice:
-        data = self._post(
-            "/addinvoice",
-            data={"amt": str(amount), "memo": description},
-            headers=self.auth,
-        )
-        return Invoice(
-            txid=data["add_index"],
-            payment_request=data["pay_req"],
-            amount=amount,
-            description=description,
-        )
+    ):
+        data = self._create_invoice(amount, description, expiry)
+        return data
 
     def pay_invoice(self, *, payment_request: str):
         data = self._post(
