@@ -1,7 +1,9 @@
 from os import getenv
 from typing import Tuple
 
-from conduct.types import Invoice, MilliSatoshi
+from conduct import exceptions
+from conduct.types import MilliSatoshi, Payment
+
 from .base import Wallet, RestMixin
 
 
@@ -14,11 +16,7 @@ class LndHub:
 
     def __init__(self, uri: str) -> None:
         self.uri = uri
-        if (
-            not uri.startswith("lndhub://")
-            or not self.endpoint.startswith("https://")
-            or None in self.credentials
-        ):
+        if not uri.startswith("lndhub://") or not self.endpoint.startswith("https://") or None in self.credentials:
             raise ValueError
 
     @property
@@ -29,9 +27,7 @@ class LndHub:
 
     @property
     def credentials(self) -> Tuple[str, str]:
-        username, password = (
-            self.uri.replace("lndhub://", "").split("@")[0].split(":", 2)
-        )
+        username, password = self.uri.replace("lndhub://", "").split("@")[0].split(":", 2)
         return username, password
 
 
@@ -49,17 +45,20 @@ class LndHubWallet(Wallet, RestMixin):
         self.refresh_token, access_token = res["refresh_token"], res["access_token"]
         self.auth = {"Authorization": f"Bearer {access_token}"}
 
-    def _check_response_errors(self, data: dict) -> None:
-        pass
-
-    def _create_invoice(
-        self, amount: int, description: str = "", expiry: int = 3600
-    ) -> dict:
-        return self._post(
-            "/addinvoice",
-            data={"amt": str(amount), "memo": description},
-            headers=self.auth,
-        )
+    def _check_response_errors(self, status_code: int, data: dict) -> None:
+        if "error" in data and data["error"]:
+            try:
+                raise {
+                    1: exceptions.BadAuthException,
+                    2: exceptions.NotEnoughBalanceException,
+                    3: exceptions.LndRoutingException,
+                    4: exceptions.InvalidInvoiceException,
+                    5: exceptions.LndRoutingException,
+                    6: exceptions.ServerErrorException,
+                    7: exceptions.ServerErrorException,
+                }[data["code"]](data["message"])
+            except KeyError:
+                raise exceptions.ConductException(data["message"])
 
     def get_info(self):
         raise NotImplementedError
@@ -68,16 +67,21 @@ class LndHubWallet(Wallet, RestMixin):
         data = self._get("/balance", headers=self.auth)
         return MilliSatoshi.from_sat(data["BTC"]["AvailableBalance"])
 
-    def create_invoice(
-        self, *, amount: int, description: str = "", expiry: int = 3600
-    ):
-        data = self._create_invoice(amount, description, expiry)
-        return data
+    def create_invoice(self, *, amount: int, description: str = "", expiry: int = 3600) -> Payment:
+        data = self._post("/addinvoice", data={"amt": str(amount), "memo": description}, headers=self.auth)
 
-    def pay_invoice(self, *, payment_request: str):
-        data = self._post(
-            "/payinvoice", data={"invoice": payment_request}, headers=self.auth
+        return Payment(
+            txid=self._sanitize_txid(data["preimage"]),
+            payment_request=data["pay_req"],
+            amount=MilliSatoshi.from_sat(int(data["amt"])),
+            description=data["memo"],
+            timestamp=data["timestamp"],
+            expiry=int(data["expiry"]),
+            fee=MilliSatoshi.from_sat(data["fee"]),
         )
+
+    def pay_invoice(self, *, payment_request: str) -> Payment:
+        data = self._post("/payinvoice", data={"invoice": payment_request}, headers=self.auth)
         return data
 
     def get_invoice_status(self, *, txid: str):

@@ -1,7 +1,17 @@
 import pytest
 import uuid
 
-from conduct.wallets import LNbitsWallet, LndHubWallet, LNPayWallet, LntxbotWallet
+from conduct.exceptions import ConductException
+from conduct.types import Payment
+from conduct.wallets import (
+    LNbitsWallet,
+    LNPayWallet,
+    LntxbotWallet,
+    OpenNodeWallet,
+)
+
+
+WALLET_CLASSES = [LNbitsWallet, LNPayWallet, LntxbotWallet, OpenNodeWallet]
 
 
 def short_uuid() -> str:
@@ -11,16 +21,17 @@ def short_uuid() -> str:
 class TestTransactions:
     """Tests a chain of transactions between wallets."""
 
-    @pytest.mark.parametrize(
-        "wallet_class, txid_key, pr_key",
-        [
-            (LNbitsWallet, "checking_id", "payment_request"),
-            # (LndHubWallet, ..., "pay_req"),
-            (LNPayWallet, "id", "payment_request"),
-            (LntxbotWallet, "payment_hash", "payment_request"),
-        ],
-    )
-    def test_chain(self, wallet_class, txid_key, pr_key):
-        data = wallet_class()._create_invoice(amount=10, description=short_uuid())
-        assert txid_key in data and isinstance(data[txid_key], str)
-        assert pr_key in data and isinstance(data[pr_key], str)
+    @pytest.mark.parametrize("wallet_class", WALLET_CLASSES)
+    @pytest.mark.skip
+    def test_balance(self, wallet_class):
+        assert wallet_class().get_balance().sat >= 0
+
+    @pytest.mark.parametrize("wallet_class", WALLET_CLASSES)
+    def test_create_invoice(self, wallet_class):
+        invoice = wallet_class().create_invoice(amount=10, description=short_uuid())
+        assert isinstance(invoice, Payment)
+
+    @pytest.mark.parametrize("wallet_class", WALLET_CLASSES)
+    def test_create_invalid_invoice(self, wallet_class):
+        with pytest.raises(ConductException):
+            wallet_class().create_invoice(amount=-10)

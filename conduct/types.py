@@ -1,23 +1,5 @@
 from decimal import Decimal
-from typing import NamedTuple, Optional
-
-
-class EpochTime(int):
-    """UNIX Epoch time."""
-
-
-class Invoice(NamedTuple):
-    txid: str
-    payment_request: str
-
-
-class Payment(NamedTuple):
-    txid: str
-    payment_request: str
-    timestamp: EpochTime
-    amount: int
-    fee: int
-    description: Optional[str]
+from typing import NamedTuple, Optional, Union
 
 
 class MilliSatoshi(int):
@@ -28,7 +10,7 @@ class MilliSatoshi(int):
         return cls(btc * 100_000_000_000)
 
     @classmethod
-    def from_sat(cls, sat: int) -> "MilliSatoshi":
+    def from_sat(cls, sat: Union[int, float]) -> "MilliSatoshi":
         return cls(sat * 1_000)
 
     @property
@@ -36,5 +18,15 @@ class MilliSatoshi(int):
         return Decimal(self) / 100_000_000_000
 
     @property
-    def sat(self) -> int:
-        return self // 1_000
+    def sat(self) -> Decimal:
+        return Decimal(self) / 1_000
+
+
+class Payment(NamedTuple):
+    txid: str
+    payment_request: str
+    amount: MilliSatoshi
+    description: Optional[str] = None
+    timestamp: Optional[int] = None
+    expiry: Optional[int] = None
+    fee: Optional[MilliSatoshi] = None
